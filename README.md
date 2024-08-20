@@ -2,6 +2,9 @@
 
 **MS Teams Enterprise Chat Exporter** is a C# console application that allows users to export their Microsoft Teams chat conversations to JSON and PDF formats. The application fetches chat data using the Microsoft Teams API and provides an option to generate PDFs from the exported JSON data.
 
+## Portable Exe for Windows x64
+[Google Drive URL]([https://link-url-here.org](https://drive.google.com/file/d/1qWSJwoduNCV6uZtPJ4zDhBaWSk9ZNSw1/view?usp=sharing))
+
 ## Features
 
 - **Export Conversations:** Fetch and export your Microsoft Teams conversations to a JSON file.
