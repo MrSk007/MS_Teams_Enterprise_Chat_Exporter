@@ -6,7 +6,7 @@ namespace MS_Teams_Chat_Exporter.Core
 {
     public interface ICoreProcessor
     {
-        void Start();
+        Task Start();
     }
     public sealed class CoreProcessor: ICoreProcessor
     {
@@ -14,7 +14,7 @@ namespace MS_Teams_Chat_Exporter.Core
             PrintAppTilte.PrintColorFullTitle();
         }
 
-        public async void Start()
+        public async Task Start()
         {
             string directoryPath = Path.Combine(Directory.GetCurrentDirectory(), AppSettingsConstants.DataFolderName);
             string outputFilePath = Path.Combine(directoryPath, AppSettingsConstants.ConversationJsonFileName);
