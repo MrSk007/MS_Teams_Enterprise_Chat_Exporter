@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using MS_Teams_Chat_Exporter.Data;
+
 
 namespace MS_Teams_Chat_Exporter.Utils
 {
@@ -22,7 +24,7 @@ namespace MS_Teams_Chat_Exporter.Utils
                     Directory.CreateDirectory(pdfFilePath);
                 }
 
-                var fileName = jsonFilePath.Split("\\")[jsonFilePath.Split("\\").Length - 1].Replace(".json", "");
+                var fileName = jsonFilePath.Split("\\")[jsonFilePath.Split("\\").Length - 1].Replace(".json", "").Trim();
 
                 // Load JSON data
                 var jsonData = File.ReadAllText(jsonFilePath);
@@ -38,27 +40,49 @@ namespace MS_Teams_Chat_Exporter.Utils
                     string outputHtml = string.Empty;
                     foreach (var entry in chatEntries)
                     {
-                        // Prepare HTML content
-                        var htmlContent = "<div style='padding: 10px 5px 5px 10px;text-wrap: pretty;'>";
+						var htmlContent = "";
+						
+						// handle different types of entries
+						string mt = entry["messagetype"]?.ToString();
+						
+						if ( string.IsNullOrEmpty( mt ) ) {
+							continue;
+						} else if ( mt == "ThreadActivity/DeleteMember" ) {
+							continue;
+						} else if ( mt == "ThreadActivity/AddMember" ) {
+							htmlContent = "<div style='padding: 10px 5px 5px 10px;text-wrap: pretty;'>";
+							var time = Convert.ToDateTime(entry["originalarrivaltime"]?.ToString());
+							htmlContent += $"<p><strong>Person added</strong> - {time.ToString("g")}</p>";
+							// Add a separator line
+							htmlContent += "<hr style='margin-bottom: 10px;'/>";
+							htmlContent += "</div>";
 
-                        // Name
-                        var name = entry["fromDisplayNameInToken"]?.ToString() ?? entry["imdisplayname"]?.ToString() ?? "Unknown";
-                        var time = Convert.ToDateTime(entry["originalarrivaltime"]?.ToString());
-                        htmlContent += $"<p><strong>Name:</strong> {name} - {time.ToString("g")}</p>";
+						} else {
 
-                        // Chat content
-                        var content = entry["content"]?.ToString() ?? "No content";
-                        htmlContent += $"<p><strong>Chat content:</strong> {content}</p>";
+							// Prepare HTML content
+							htmlContent = "<div style='padding: 10px 5px 5px 10px;text-wrap: pretty;'>";
 
-                        // Chat files links
-                        var files = entry["properties"]?["files"]?.ToString() ?? "No files";
-                        htmlContent += $"<p><strong>Chat files links:</strong> {files}</p>";
+							// Name
+							var name = entry["fromDisplayNameInToken"]?.ToString() ?? entry["imdisplayname"]?.ToString() ?? "Unknown";
+							var time = Convert.ToDateTime(entry["originalarrivaltime"]?.ToString());
+							htmlContent += $"<p><strong>Name:</strong> {name} - {time.ToString("g")}</p>";
 
-                        // Add a separator line
-                        htmlContent += "<hr style='margin-bottom: 10px;'/>";
+							// Chat content
+							var content = entry["content"]?.ToString() ?? "No content";
+	//                        htmlContent += $"<p><strong>Chat content:</strong> {content}</p>";
+							htmlContent += $"<p>{content}</p>";
 
-                        htmlContent += "</div>";
+							// Chat files links
+							var files = entry["properties"]?["files"]?.ToString();
+							if ( ( ! string.IsNullOrEmpty( files ) ) && ( ( files != "[]" ) ) )  {
+								htmlContent += $"<p><strong>++ Chat files links:</strong> {files}</p>";
 
+							}
+							// Add a separator line
+							htmlContent += "<hr style='margin-bottom: 10px;'/>";
+
+							htmlContent += "</div>";
+						}
                         outputHtml += htmlContent;
                     }
 
@@ -67,13 +91,13 @@ namespace MS_Teams_Chat_Exporter.Utils
                     {
                         HtmlConverter.ConvertToPdf(tempHtmlStream, pdfDocument);
                     }
-                    Console.WriteLine("PDF generated successfully at: " + Path.GetFullPath(pdfFileExportPath));
+                    DataProcessor.logWriteLine("PDF generated successfully at: " + Path.GetFullPath(pdfFileExportPath));
                 }
 
             }
             catch (Exception ex)
             {
-                Console.WriteLine("An error occurred: " + ex.Message);
+                DataProcessor.logWriteLine("An error occurred: " + ex.Message);
             }
         }
     }

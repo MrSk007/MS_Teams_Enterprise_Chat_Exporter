@@ -6,7 +6,7 @@ namespace MS_Teams_Chat_Exporter.Core
 {
     public interface ICoreProcessor
     {
-        Task Start();
+        Task Start(string argcmd, bool doPdf,  bool doConv, bool doChats,  bool doCont);
     }
     public sealed class CoreProcessor: ICoreProcessor
     {
@@ -14,52 +14,95 @@ namespace MS_Teams_Chat_Exporter.Core
             PrintAppTilte.PrintColorFullTitle();
         }
 
-        public async Task Start()
+        public async Task Start(string argcmd, bool doPdf,  bool doConv, bool doChats,  bool doCont)
         {
+			bool freshRun = true;
+			
+			// init log
+			string logfile = Path.Combine(Directory.GetCurrentDirectory(), "exportlog.txt");
+
+			if ( File.Exists( logfile ) ) {
+				int i = 0;
+				string oldfile = logfile;
+				while ( File.Exists( oldfile ) ) {
+					i = i + 1;
+					oldfile = logfile + "-" + i.ToString().Trim();
+				}
+				File.Move( logfile, oldfile );
+			}
+			if ( File.Exists( logfile ) ) {
+				Console.WriteLine(">>> ERROR: Could not move old log files");
+				return;
+			}
+			DataProcessor.logwriter = File.AppendText(logfile);
+
+
+			// get dirs & files
             string directoryPath = Path.Combine(Directory.GetCurrentDirectory(), AppSettingsConstants.DataFolderName);
-            string outputFilePath = Path.Combine(directoryPath, AppSettingsConstants.ConversationJsonFileName);
 
-            Console.WriteLine("Please enter your Bearer token to fetch your teams conversations : ");
 
-            string bearerToken = Console.ReadLine();
+			string outputFilePath = DataProcessor.createFileName( directoryPath, AppSettingsConstants.ConversationJsonFileName, ".json", false );
 
-            Console.WriteLine("Fetching Conversations ... ");
+            string bearerTokenFile = Path.Combine(directoryPath, AppSettingsConstants.BearerTokenFileName);
 
-            await DataProcessor.FetchAPIData(AppSettingsConstants.InitialApiUrl, outputFilePath, bearerToken, directoryPath, "conversations");
 
-            Console.WriteLine("----------- Conversations Json exported -------------");
+			
+			
+			
+			if ( doConv ) {
 
-            Console.WriteLine("Fetching One to One Personal Chats ... ");
+				DataProcessor.logWriteLine("Fetching Conversations ... ");
 
-            await DataProcessor.GenerateMessageJson(outputFilePath, bearerToken);
+				string choice = "";
+				if ( File.Exists( outputFilePath ) ) {
+					if ( doCont ) {
+						freshRun = false;
+					} else {
+						Console.WriteLine("Do you want to overwrite conversations??? - Say : Yes or No");
 
-            Console.WriteLine("--------------- One to One Personal Chats Json exported ... -------------------");
+						choice = "";
+						choice = Console.ReadLine()?.ToLower();
+						if ( choice != "yes" ) {
+							return;
+						}
+					}
+				}
+				
+				if ( freshRun ) {
+					DataProcessor.logWriteLine("Fetching full response ... ");
+					await DataProcessor.FetchAPIData(AppSettingsConstants.InitialApiUrl, outputFilePath, bearerTokenFile, directoryPath, "conversations" );
 
-            Console.WriteLine("Do you want to Generate Chat PDF - Say : Yes or No");
 
-            string choice = Console.ReadLine()?.ToLower();
+					DataProcessor.logWriteLine("----------- Conversations Json exported -------------");
+				} else {
+					DataProcessor.logWriteLine("----------- use existing conversations -------------");
+				}
+					
+			}
 
-            if (choice == "yes")
-            {
-                string messageDirectoryPath = Path.Combine(Directory.GetCurrentDirectory(), AppSettingsConstants.MessageFolderName);
-                if (Directory.Exists(messageDirectoryPath))
-                {
-                    string[] files = Directory.GetFiles(messageDirectoryPath);
+			if ( doChats ) {
+				DataProcessor.logWriteLine("Fetching Recent Chats ... ");
 
-                    // Output the paths of the files
-                    Console.WriteLine("Files in directory: " + messageDirectoryPath);
+				await DataProcessor.GenerateMessageJson(outputFilePath, directoryPath, bearerTokenFile);
 
-                    foreach (var file in files)
-                    {
-                        PrintPDF.GeneratePDFFromJSON(file, Path.Combine(Directory.GetCurrentDirectory(), AppSettingsConstants.ExportPdfFolderName));
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("Your Chats Exported Successfully....");
-                    await Task.Delay(1000);
-                }
-            }
-        }
+				DataProcessor.logWriteLine("--------------- Chats Json exported ... -------------------");
+			}
+			
+			if ( doPdf ) {
+					await DataProcessor.doPdf( directoryPath );
+				// Console.WriteLine("Do you want to Generate Chat PDF - Say : Yes or No");
+
+				// choice = "";
+				// choice = Console.ReadLine()?.ToLower();
+
+				// if (choice == "yes")
+
+			}
+			
+			DataProcessor.logWriteLine("Your Chats Exported Successfully....");
+			DataProcessor.logWriteLine("");
+			DataProcessor.logWriteLine(">>>DONE");
+			await Task.Delay(1000);
+        }	
     }
 }

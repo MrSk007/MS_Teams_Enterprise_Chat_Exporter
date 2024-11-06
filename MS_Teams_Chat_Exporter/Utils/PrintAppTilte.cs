@@ -9,7 +9,7 @@ namespace MS_Teams_Chat_Exporter.Utils
         public static void PrintColorFullTitle()
         {
             Figlet figlet = new Figlet();
-            Console.WriteLine(figlet.ToAscii("Author : MrSk007"));
+            Console.WriteLine(figlet.ToAscii("A: MrSk007 + JVI"));
         }
     }
 }
